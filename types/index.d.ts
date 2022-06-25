@@ -1,1 +1,3 @@
-export type Snowflake = string;
+export type SnowflakeGenerationOptions = {
+    generate: boolean;
+}
