@@ -2,7 +2,7 @@ import cluster from "node:cluster";
 
 const epoch: number = 1655942400000;
 let increment: number = 0;
-let lastSnowflakeId: string = ''
+let cache: Set<string> = new Set();
 
 /**
  * Converts a number to binary and adds a specified number of zeros in front of it.
@@ -30,6 +30,11 @@ export class Snowflake {
     public readonly id: string;
 
     /**
+     * The date when this snowflake was created;
+     */
+    public readonly createdAt: Date;
+
+    /**
      * The timestamp when this snowflake was created.
      */
     public readonly createdTimestamp: number;
@@ -45,7 +50,8 @@ export class Snowflake {
     public readonly wid: number;
 
     public constructor() {
-        this.createdTimestamp = new Date().getTime();
+        this.createdAt = new Date();
+        this.createdTimestamp = this.createdAt.getTime();
         this.pid = process.pid
         this.wid = cluster.worker?.id ?? 0;
 
@@ -54,13 +60,12 @@ export class Snowflake {
         const workerId = pad(this.wid, 5);
   
         let snowflake = `0b${millisecondsSinceEpoch}${workerId}${processId}${getIncrement(increment)}`;
-        if (snowflake === lastSnowflakeId) {
+        while(cache.has(snowflake)) 
             snowflake = `0b${millisecondsSinceEpoch}${workerId}${processId}${getIncrement(++increment)}`
-        } else {
-            increment = 0;  
-        }
+        cache.add(snowflake); 
 
-        lastSnowflakeId = snowflake;   
+        increment = 0;
+        
         this.id = BigInt(snowflake).toString();
     }
 }
