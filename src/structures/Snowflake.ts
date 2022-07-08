@@ -1,4 +1,5 @@
 import cluster from "node:cluster";
+import { SnowflakeIdentifier } from "../../types";
 
 const epoch: number = 1655942400000;
 let increment: number = 0;
@@ -20,52 +21,25 @@ const pad = (number: number, by: number): string => number.toString(2).padStart(
  */
 const getIncrement = (add: number): string => pad(increment + add, 12);
 
-/**
- * Generates a new unique Snowflake ID based on twitters id implementation.
- */
 export class Snowflake {
-    /**
-     * The 64 bit integer id represented as a string.
-     */
-    public readonly id: string;
+    private constructor() { }
 
     /**
-     * The date when this snowflake was created;
+     * Generates a new unique Snowflake ID based on twitters id implementation.
      */
-    public readonly createdAt: Date;
-
-    /**
-     * The timestamp when this snowflake was created.
-     */
-    public readonly createdTimestamp: number;
-
-    /**
-     * The id of the NodeJS process used to create this snowflake
-     */
-    public readonly pid: number;
-
-    /**
-     * The id of the cluster worker used to create this snowflake
-     */
-    public readonly wid: number;
-
-    public constructor() {
-        this.createdAt = new Date();
-        this.createdTimestamp = this.createdAt.getTime();
-        this.pid = process.pid
-        this.wid = cluster.worker?.id ?? 0;
-
-        const millisecondsSinceEpoch = pad(this.createdTimestamp - epoch, 42);
-        const processId = pad(this.pid, 5).slice(0, 5);
-        const workerId = pad(this.wid, 5);
+    public static generate(): SnowflakeIdentifier {
+        const millisecondsSinceEpoch = pad(new Date().getTime() - epoch, 42);
+        const processId = pad(process.pid, 5).slice(0, 5);
+        const workerId = pad(cluster.worker?.id ?? 0, 5);
   
         let snowflake = `0b${millisecondsSinceEpoch}${workerId}${processId}${getIncrement(increment)}`;
-        while(cache.has(snowflake)) 
+        while(cache.has(snowflake)) {
             snowflake = `0b${millisecondsSinceEpoch}${workerId}${processId}${getIncrement(++increment)}`
+        }
         cache.add(snowflake); 
 
         increment = 0;
         
-        this.id = BigInt(snowflake).toString();
+        return BigInt(snowflake).toString() as SnowflakeIdentifier;
     }
 }
